@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
 # User-specific files
 *.rsuser
 *.suo
@@ -348,3 +352,4 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+/src/LambdaQuipToS3Exporter/aws-lambda-tools-defaults.json
