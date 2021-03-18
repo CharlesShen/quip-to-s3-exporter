@@ -14,6 +14,7 @@ namespace LambdaQuipToS3ExporterCdk
                 Runtime = Runtime.DOTNET_CORE_3_1,
                 Code = Code.FromAsset("src/LambdaQuipToS3Exporter/bin/Release/netcoreapp3.1/publish"),
                 Handler = "LambdaQuipToS3Exporter::LambdaQuipToS3Exporter.Function::FunctionHandler",
+                MemorySize = 256
             });
 
             var scheduleRule = new Rule(this, "quip-to-s3-exporter-schedule", new RuleProps
