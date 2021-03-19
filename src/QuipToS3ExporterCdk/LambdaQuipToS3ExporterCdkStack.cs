@@ -23,7 +23,8 @@ namespace LambdaQuipToS3ExporterCdk
                 DefaultBehavior = new BehaviorOptions()
                 {
                     Origin = new S3Origin(s3Bucket),
-                    CachePolicy = CachePolicy.CACHING_DISABLED
+                    CachePolicy = CachePolicy.CACHING_DISABLED,
+                    ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS
                 },
                 DefaultRootObject = "index.html"
             });
