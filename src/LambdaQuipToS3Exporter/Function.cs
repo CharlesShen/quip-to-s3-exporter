@@ -58,6 +58,7 @@ namespace LambdaQuipToS3Exporter
                 (settings.DocumentOutputPaths?.Count() ?? 0) == 0)
             {
                 LambdaLogger.Log("Nothing defined for DocumentIds or DocumentOutputPaths. Quitting.");
+                return;
             }
 
             if (settings.DocumentIds.Count() != settings.DocumentOutputPaths.Count())
