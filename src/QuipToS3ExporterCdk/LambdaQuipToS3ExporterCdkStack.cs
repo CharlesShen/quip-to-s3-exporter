@@ -35,7 +35,8 @@ namespace LambdaQuipToS3ExporterCdk
                 Handler = "LambdaQuipToS3Exporter::LambdaQuipToS3Exporter.Function::FunctionHandler",
                 MemorySize = 256,
                 RetryAttempts = 0,
-                ReservedConcurrentExecutions = 1
+                ReservedConcurrentExecutions = 1,
+                Timeout = Duration.Seconds(60)
             });
 
             function.AddEnvironment("S3BucketOutput", s3Bucket.BucketName);
