@@ -71,6 +71,8 @@ namespace LambdaQuipToS3Exporter
                 var documentId = settings.DocumentIds.ElementAt(i);
                 var documentOutputPath = settings.DocumentOutputPaths.ElementAt(i);
 
+                LambdaLogger.Log($"Processing DocumentId: {documentId}");
+
                 var httpClient = new HttpClient();
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.QuipApiToken);
 
@@ -91,6 +93,8 @@ namespace LambdaQuipToS3Exporter
                 // if quip document has been modified, also process the associated blobs (embedded images, etc)
                 if (dirtyDocument)
                 {
+                    LambdaLogger.Log($"DocumentId {documentId} has been modified, syncing changes.");
+
                     var blobMatches = blobRegex.Matches(quipHtml);
                     if (blobMatches.Any())
                     {
@@ -103,6 +107,7 @@ namespace LambdaQuipToS3Exporter
                             using (var stream = blobResponse.Content.ReadAsStreamAsync().Result)
                             {
                                 PutObject(settings.S3BucketOutput, s3BlobKey, stream, blobResponse.Content.Headers.ContentType.MediaType, quipUpdatedTimestamp).Wait();
+                                LambdaLogger.Log($"DocumentId {documentId} successfully synced.");
                             }
                         }
                     }
