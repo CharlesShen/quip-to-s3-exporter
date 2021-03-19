@@ -106,8 +106,13 @@ namespace LambdaQuipToS3Exporter
                             using (var blobResponse = httpClient.GetAsync($"https://platform.quip-amazon.com/1/blob/{documentId}/{blobId}").Result)
                             using (var stream = blobResponse.Content.ReadAsStreamAsync().Result)
                             {
-                                PutObject(settings.S3BucketOutput, s3BlobKey, stream, blobResponse.Content.Headers.ContentType.MediaType, quipUpdatedTimestamp).Wait();
-                                LambdaLogger.Log($"DocumentId {documentId} successfully synced.");
+                                var putTask = PutObject(settings.S3BucketOutput, s3BlobKey, stream, blobResponse.Content.Headers.ContentType.MediaType, quipUpdatedTimestamp);
+                                putTask.Wait();
+
+                                if (putTask.Result)
+                                {
+                                    LambdaLogger.Log($"DocumentId {documentId} successfully synced.");
+                                }
                             }
                         }
                     }
@@ -128,7 +133,7 @@ namespace LambdaQuipToS3Exporter
 
                 performUpdate = currentObjectTimestamp < lastUpdatedTimestamp;
             }
-            catch (Exception) { }
+            catch (Exception) { /*metadata might not exist because this is a new file*/ }
 
             if (performUpdate)
             {
@@ -141,7 +146,11 @@ namespace LambdaQuipToS3Exporter
                 };
                 putQuipHtmlRequest.Metadata.Add(ChangeDetectionMetadataKey, lastUpdatedTimestamp.ToString());
 
-                await s3Client.PutObjectAsync(putQuipHtmlRequest);
+                var putObjectResponse = await s3Client.PutObjectAsync(putQuipHtmlRequest);
+                if (putObjectResponse.HttpStatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    LambdaLogger.Log($"S3 Client PutObjectAsync Error: {JsonSerializer.Serialize(putObjectResponse)}");
+                }
             }
 
             return performUpdate;
