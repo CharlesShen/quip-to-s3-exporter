@@ -57,7 +57,7 @@ namespace LambdaQuipToS3Exporter
             if (((settings.DocumentIds?.Count() ?? 0) == 0) ||
                 (settings.DocumentOutputPaths?.Count() ?? 0) == 0)
             {
-                throw new Exception("Undefined DocumentIds or DocumentOutputPaths.");
+                LambdaLogger.Log("Nothing defined for DocumentIds or DocumentOutputPaths. Quitting.");
             }
 
             if (settings.DocumentIds.Count() != settings.DocumentOutputPaths.Count())
