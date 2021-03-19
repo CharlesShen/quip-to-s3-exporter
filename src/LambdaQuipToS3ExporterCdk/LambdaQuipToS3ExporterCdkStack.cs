@@ -19,7 +19,7 @@ namespace LambdaQuipToS3ExporterCdk
 
             var scheduleRule = new Rule(this, "quip-to-s3-exporter-schedule", new RuleProps
             {
-                Schedule = Schedule.Cron(new CronOptions { Minute = "2" }),
+                Schedule = Schedule.Rate(Duration.Minutes(2)),
                 Targets = new[] { new LambdaFunction(function) },
                 Enabled = true
             });
