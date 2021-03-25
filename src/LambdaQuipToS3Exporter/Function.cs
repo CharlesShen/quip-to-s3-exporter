@@ -76,13 +76,13 @@ namespace LambdaQuipToS3Exporter
                 var httpClient = new HttpClient();
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.QuipApiToken);
 
-                var quipResponse = httpClient.GetStringAsync($"https://platform.quip-amazon.com/1/threads/{documentId}").Result;
+                var quipResponse = httpClient.GetStringAsync($"https://platform.{settings.QuipDomain}/1/threads/{documentId}").Result;
 
                 var quip = JsonSerializer.Deserialize<JsonElement>(quipResponse);
                 var quipHtml = quip.GetProperty("html").GetString();
                 var quipUpdatedTimestamp = quip.GetProperty("thread").GetProperty("updated_usec").GetUInt64();
 
-                var appendHtml = settings.OutputQuipEditLink ? @$"<div class=""edit-quip""><a target=""_blank"" href=""https://quip-amazon.com/{documentId}"">Edit Page (requires permissions)</a></div>" : null;
+                var appendHtml = settings.OutputQuipEditLink ? @$"<div class=""edit-quip""><a target=""_blank"" href=""https://{settings.QuipDomain}/{documentId}"">Edit Page (requires permissions)</a></div>" : null;
 
                 var dirtyDocument = false;
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes($"{settings.PrependText}{quipHtml}{settings.AppendText}")))
@@ -103,7 +103,7 @@ namespace LambdaQuipToS3Exporter
                             var s3BlobKey = match.Groups[1].Value;
                             var blobId = match.Groups[2].Value;
 
-                            using (var blobResponse = httpClient.GetAsync($"https://platform.quip-amazon.com/1/blob/{documentId}/{blobId}").Result)
+                            using (var blobResponse = httpClient.GetAsync($"https://platform.{settings.QuipDomain}/1/blob/{documentId}/{blobId}").Result)
                             using (var stream = blobResponse.Content.ReadAsStreamAsync().Result)
                             {
                                 var putTask = PutObject(settings.S3BucketOutput, s3BlobKey, stream, blobResponse.Content.Headers.ContentType.MediaType, quipUpdatedTimestamp);

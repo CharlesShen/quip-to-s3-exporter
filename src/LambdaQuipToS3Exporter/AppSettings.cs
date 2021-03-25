@@ -11,5 +11,7 @@ namespace LambdaQuipToS3Exporter
         public string PrependText { get; set; }
         public string AppendText { get; set; }
         public bool OutputQuipEditLink { get; set; }
+        public string QuipDomainOverride { get; set; }
+        public string QuipDomain { get { return QuipDomainOverride ?? "quip.com"; } }
     }
 }
