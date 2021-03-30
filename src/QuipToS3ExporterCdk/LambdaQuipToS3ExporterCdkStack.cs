@@ -26,7 +26,16 @@ namespace LambdaQuipToS3ExporterCdk
                     CachePolicy = CachePolicy.CACHING_DISABLED,
                     ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS
                 },
-                DefaultRootObject = "index.html"
+                DefaultRootObject = "index.html",
+                ErrorResponses = new[] {
+                    new ErrorResponse()
+                    {
+                        HttpStatus = 403,
+                        Ttl = Duration.Seconds(0),
+                        ResponsePagePath = "/index.html",
+                        ResponseHttpStatus = 200
+                    }
+                }
             });
 
             var function = new Function(this, "function", new FunctionProps
