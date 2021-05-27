@@ -1,6 +1,15 @@
 # quip-to-s3-exporter
+
 Lambda function to automatically sync/export your Quip documents to an S3 bucket
 
-Steps:
+## prerequisites
+
+* .NET Core SDK
+* Node.js (Current or LTS)
+* AWS CDK Tookkit
+
+## getting started
+
 1. dotnet publish -c Release src\LambdaQuipToS3Exporter
-2. cdk deploy
+2. cdk bootstrap
+3. cdk deploy
