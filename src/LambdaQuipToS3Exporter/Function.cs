@@ -34,6 +34,12 @@ namespace LambdaQuipToS3Exporter
             var settings = configuration.Get<AppSettings>();
             serviceCollection.AddSingleton(settings);
 
+            serviceCollection.AddHttpClient("quip", c =>
+            {
+                c.BaseAddress = new Uri($"https://platform.{settings.QuipDomain}/");
+                c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.QuipApiToken);
+            });
+
             return serviceCollection.BuildServiceProvider();
         };
 
@@ -53,6 +59,8 @@ namespace LambdaQuipToS3Exporter
             LambdaLogger.Log("CONTEXT: " + JsonSerializer.Serialize(context));
 
             var settings = services.GetRequiredService<AppSettings>();
+            var httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
+            var httpClient = httpClientFactory.CreateClient("quip");
 
             if (((settings.DocumentIds?.Count() ?? 0) == 0) ||
                 (settings.DocumentOutputPaths?.Count() ?? 0) == 0)
@@ -73,87 +81,100 @@ namespace LambdaQuipToS3Exporter
 
                 LambdaLogger.Log($"Processing DocumentId: {documentId}");
 
-                var httpClient = new HttpClient();
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.QuipApiToken);
+                var quipClient = new QuipApi.Client(httpClient);
+                var document = quipClient.GetThread(documentId).Result;
+                var staleObject = IsObjectStale(settings.S3BucketOutput, documentOutputPath, document.thread.updated_usec);
 
-                var quipResponse = httpClient.GetStringAsync($"https://platform.{settings.QuipDomain}/1/threads/{documentId}").Result;
-
-                var quip = JsonSerializer.Deserialize<JsonElement>(quipResponse);
-                var quipHtml = quip.GetProperty("html").GetString();
-                var quipUpdatedTimestamp = quip.GetProperty("thread").GetProperty("updated_usec").GetUInt64();
-
-                var appendHtml = settings.OutputQuipEditLink ? @$"<div class=""edit-quip""><a target=""_blank"" href=""https://{settings.QuipDomain}/{documentId}"">Edit Page (requires permissions)</a></div>" : null;
-
-                var dirtyDocument = false;
-                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes($"{settings.PrependText}{quipHtml}{settings.AppendText}")))
-                {
-                    dirtyDocument = PutObject(settings.S3BucketOutput, documentOutputPath, stream, "text/html", quipUpdatedTimestamp).Result;
-                }
-
-                // if quip document has been modified, also process the associated blobs (embedded images, etc)
-                if (dirtyDocument)
+                if (staleObject)
                 {
                     LambdaLogger.Log($"DocumentId {documentId} has been modified, syncing changes.");
 
-                    var blobMatches = blobRegex.Matches(quipHtml);
-                    if (blobMatches.Any())
+                    switch (document.thread.type)
                     {
-                        foreach (Match match in blobMatches)
-                        {
-                            var s3BlobKey = match.Groups[1].Value;
-                            var blobId = match.Groups[2].Value;
-
-                            using (var blobResponse = httpClient.GetAsync($"https://platform.{settings.QuipDomain}/1/blob/{documentId}/{blobId}").Result)
-                            using (var stream = blobResponse.Content.ReadAsStreamAsync().Result)
+                        case "document":
                             {
-                                var putTask = PutObject(settings.S3BucketOutput, s3BlobKey, stream, blobResponse.Content.Headers.ContentType.MediaType, quipUpdatedTimestamp);
-                                putTask.Wait();
+                                var editLinkHtml = settings.OutputQuipEditLink ? @$"<div class=""edit-quip""><a target=""_blank"" href=""{document.thread.link}"">Edit Page (requires permissions)</a></div>" : null;
+                                var html = $"{settings.PrependHtml}{document.html}{editLinkHtml}{settings.AppendHtml}";
+                                PutObject(settings.S3BucketOutput, documentOutputPath, Encoding.UTF8.GetBytes(html), "text/html", document.thread.updated_usec).Wait();
 
-                                if (putTask.Result)
+                                var blobMatches = blobRegex.Matches(document.html);
+                                if (blobMatches.Any())
                                 {
-                                    LambdaLogger.Log($"DocumentId {documentId} successfully synced.");
+                                    foreach (Match match in blobMatches)
+                                    {
+                                        var s3BlobKey = match.Groups[1].Value;
+                                        var blobId = match.Groups[2].Value;
+
+                                        var blob = quipClient.GetThreadBlob(documentId, blobId).Result;
+                                        PutObject(settings.S3BucketOutput, s3BlobKey, blob.Data, blob.MediaType, document.thread.updated_usec).Wait();
+                                    }
                                 }
+
+                                break;
                             }
-                        }
+                        case "spreadsheet":
+                            {
+                                var json = quipClient.ExportSpreadsheetToJson(document).Result;
+                                PutObject(settings.S3BucketOutput, documentOutputPath, Encoding.UTF8.GetBytes(json), "application/json", document.thread.updated_usec).Wait();
+
+                                break;
+                            }
+                        default:
+                            {
+                                LambdaLogger.Log($@"Skipping... Unknown document type ""{document.thread.type}"".");
+                                continue;
+                            }
                     }
+
+                    LambdaLogger.Log($"DocumentId {documentId} successfully synced.");
+                }
+                else
+                {
+                    LambdaLogger.Log($"Document has not been modified since last sync... skipping.");
                 }
             }
         }
 
-        public async Task<bool> PutObject(string s3Bucket, string s3Key, Stream data, string contentType, ulong lastUpdatedTimestamp)
+        public bool IsObjectStale(string s3Bucket, string s3Key, long lastUpdatedTimestamp)
         {
             var s3Client = new AmazonS3Client();
-
-            var performUpdate = true;
+            var staleObject = true;
 
             try
             {
                 var currentObject = s3Client.GetObjectMetadataAsync(s3Bucket, s3Key).Result;
-                var currentObjectTimestamp = Convert.ToUInt64(currentObject.Metadata[ChangeDetectionMetadataKey]);
+                var currentObjectTimestamp = Convert.ToInt64(currentObject.Metadata[ChangeDetectionMetadataKey]);
 
-                performUpdate = currentObjectTimestamp < lastUpdatedTimestamp;
+                staleObject = currentObjectTimestamp < lastUpdatedTimestamp;
             }
             catch (Exception) { /*metadata might not exist because this is a new file*/ }
 
-            if (performUpdate)
+            return staleObject;
+        }
+
+        public async Task PutObject(string s3Bucket, string s3Key, byte[] data, string contentType, long lastUpdatedTimestamp)
+        {
+            var s3Client = new AmazonS3Client();
+
+            using (var stream = new MemoryStream(data))
             {
                 var putQuipHtmlRequest = new PutObjectRequest()
                 {
                     BucketName = s3Bucket,
                     Key = s3Key,
-                    InputStream = data,
+                    InputStream = stream,
                     ContentType = contentType
                 };
                 putQuipHtmlRequest.Metadata.Add(ChangeDetectionMetadataKey, lastUpdatedTimestamp.ToString());
 
                 var putObjectResponse = await s3Client.PutObjectAsync(putQuipHtmlRequest);
+
+
                 if (putObjectResponse.HttpStatusCode != System.Net.HttpStatusCode.OK)
                 {
                     LambdaLogger.Log($"S3 Client PutObjectAsync Error: {JsonSerializer.Serialize(putObjectResponse)}");
                 }
             }
-
-            return performUpdate;
         }
     }
 }

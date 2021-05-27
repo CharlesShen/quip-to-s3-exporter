@@ -180,7 +180,6 @@ namespace ExcelToJsonExporter
         public ExcelToJsonExporter(Stream excelDataStream)
         {
             _excelDataStream = excelDataStream;
-            _excelDataStream.Position = 0;
             _workbook = new XSSFWorkbook(_excelDataStream);
 
             XSSFFormulaEvaluator.EvaluateAllFormulaCells(_workbook);

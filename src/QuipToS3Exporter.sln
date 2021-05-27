@@ -14,6 +14,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuipApi", "QuipApi\QuipApi.csproj", "{A9D42FAE-FF75-47A3-A453-F8915BD0273C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ExcelToJsonExporter", "ExcelToJsonExporter\ExcelToJsonExporter.csproj", "{AF1CCD67-F010-41B0-9834-070D9EB77D9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +36,14 @@ Global
 		{B29D9C21-8074-45DE-8028-A79858891968}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B29D9C21-8074-45DE-8028-A79858891968}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B29D9C21-8074-45DE-8028-A79858891968}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A9D42FAE-FF75-47A3-A453-F8915BD0273C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A9D42FAE-FF75-47A3-A453-F8915BD0273C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A9D42FAE-FF75-47A3-A453-F8915BD0273C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A9D42FAE-FF75-47A3-A453-F8915BD0273C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF1CCD67-F010-41B0-9834-070D9EB77D9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF1CCD67-F010-41B0-9834-070D9EB77D9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF1CCD67-F010-41B0-9834-070D9EB77D9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF1CCD67-F010-41B0-9834-070D9EB77D9E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -8,8 +8,8 @@ namespace LambdaQuipToS3Exporter
         public string S3BucketOutput { get; set; }
         public IEnumerable<string> DocumentIds { get; set; }
         public IEnumerable<string> DocumentOutputPaths { get; set; }
-        public string PrependText { get; set; }
-        public string AppendText { get; set; }
+        public string PrependHtml { get; set; }
+        public string AppendHtml { get; set; }
         public bool OutputQuipEditLink { get; set; }
         public string QuipDomainOverride { get; set; }
         public string QuipDomain { get { return QuipDomainOverride ?? "quip.com"; } }
