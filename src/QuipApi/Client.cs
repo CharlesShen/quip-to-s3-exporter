@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -9,6 +11,14 @@ namespace QuipApi
     public class Client
     {
         private readonly HttpClient _httpClient;
+
+        static Client()
+        {
+            JsonConvert.DefaultSettings = () => new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
+        }
 
         public Client(HttpClient httpClient)
         {
@@ -38,7 +48,7 @@ namespace QuipApi
 
         public async Task<string> ExportSpreadsheetToJson(Thread document)
         {
-            if(document.thread.type != "spreadsheet")
+            if (document.thread.type != "spreadsheet")
             {
                 throw new ArgumentException("Thread is not a spreadsheet type.", nameof(document.thread.type));
             }

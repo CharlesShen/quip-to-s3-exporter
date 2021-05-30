@@ -20,6 +20,12 @@ namespace LambdaQuipToS3Exporter
 {
     public class Function
     {
+        static IServiceProvider services;
+        static Function()
+        {
+            services = ConfigureServices();
+        }
+
         public static Func<IServiceProvider> ConfigureServices = () =>
         {
             var serviceCollection = new ServiceCollection();
@@ -42,13 +48,6 @@ namespace LambdaQuipToS3Exporter
 
             return serviceCollection.BuildServiceProvider();
         };
-
-        static IServiceProvider services;
-
-        static Function()
-        {
-            services = ConfigureServices();
-        }
 
         private Regex blobRegex = new Regex(@"='/(blob/[A-Za-z_0-9]+/([A-Za-z_0-9]+))'", RegexOptions.Compiled);
         private const string ChangeDetectionMetadataKey = "x-amz-meta-updatedtimestamp";
@@ -168,7 +167,6 @@ namespace LambdaQuipToS3Exporter
                 putQuipHtmlRequest.Metadata.Add(ChangeDetectionMetadataKey, lastUpdatedTimestamp.ToString());
 
                 var putObjectResponse = await s3Client.PutObjectAsync(putQuipHtmlRequest);
-
 
                 if (putObjectResponse.HttpStatusCode != System.Net.HttpStatusCode.OK)
                 {

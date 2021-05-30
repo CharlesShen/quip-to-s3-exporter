@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using System;
@@ -18,7 +19,7 @@ namespace ExcelToJsonExporter
         private const string _identifierRegexGroupName = "identifier";
         private const string _arrayIndexRegexGroupName = "arrayIndex";
         private static Regex _propertyRegex = new Regex(@$"^(?<{_identifierRegexGroupName}>\w+)(\[(?<{_arrayIndexRegexGroupName}>\d+)\])?$", RegexOptions.Singleline | RegexOptions.Compiled);
-
+        private static NamingStrategy _namingStrategy = new CamelCaseNamingStrategy();
 
         private JToken generateJsonObject(SheetContext sheet, string identifierPrefix, IDictionary<string, Property> childProperties, IRow row)
         {
@@ -28,7 +29,7 @@ namespace ExcelToJsonExporter
             {
                 var childIdentifier = $"{identifierPrefix}.{childProperty.Key}";
                 var childJToken = generateJsonToken(sheet, childIdentifier, childProperty.Value, row);
-                jObject.Add(childProperty.Key, childJToken);
+                jObject.Add(_namingStrategy.GetPropertyName(childProperty.Key, false), childJToken);
             }
 
             return jObject;
@@ -92,10 +93,11 @@ namespace ExcelToJsonExporter
                         jValue = new JValue($"#ERROR: {FormulaError.ForInt(cell.ErrorCellValue).ToString()}");
                         break;
                     }
-                    //case CellType.Unknown:
-                    //    {
-                    //        break;
-                    //    }
+                case CellType.Unknown:
+                    {
+                        jValue = new JValue($"#ERROR: Unknown Cell Type");
+                        break;
+                    }
             }
 
             return jValue;
@@ -212,7 +214,7 @@ namespace ExcelToJsonExporter
             for (int i = (sheet.FirstRowNum + 1); i <= sheet.LastRowNum; i++)
             {
                 var rootJObject = new JObject();
-                IRow row = sheet.GetRow(i);
+                var row = sheet.GetRow(i);
 
                 //ignore rows that are all blank cells or "string" cells that happen to be all empty strings
                 if (row == null || row.Cells.All(d => (d.CellType == CellType.Blank) || ((d.CellType == CellType.String) && string.IsNullOrWhiteSpace(d.StringCellValue)))) continue;
@@ -220,7 +222,7 @@ namespace ExcelToJsonExporter
                 foreach (var property in sheetContext.Properties)
                 {
                     var jToken = generateJsonToken(sheetContext, property.Key, property.Value, row);
-                    rootJObject.Add(property.Key, jToken);
+                    rootJObject.Add(_namingStrategy.GetPropertyName(property.Key, false), jToken);
                 }
 
                 rootJArray.Add(rootJObject);
