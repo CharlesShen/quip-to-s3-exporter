@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -46,7 +47,7 @@ namespace QuipApi
             }
         }
 
-        public async Task<string> ExportSpreadsheetToJson(Thread document)
+        public async Task<string> ExportSpreadsheetToJson(Thread document, string spreadsheetIgnoreRegex = null)
         {
             if (document.thread.type != "spreadsheet")
             {
@@ -57,8 +58,14 @@ namespace QuipApi
 
             using (var stream = await _httpClient.GetStreamAsync(uri))
             {
-                var exporter = new ExcelToJsonExporter.ExcelToJsonExporter(stream);
-                var jsonData = exporter.ExportSheetToJson(0);
+                IList<string> ignoreRegexes = null;
+                if (!string.IsNullOrWhiteSpace(spreadsheetIgnoreRegex))
+                {
+                    ignoreRegexes = new List<string>() { spreadsheetIgnoreRegex };
+                }
+
+                var exporter = new ExcelToJsonExporter.ExcelToJsonExporter(stream, ignoreRegexes, ignoreRegexes);
+                var jsonData = exporter.ExportWorkbookToJson(ExcelToJsonExporter.OutputFormat.ObjectWithSheetNameAsKey);
 
                 var jsonMetadata = new JObject();
                 jsonMetadata.Add("title", document.thread.title);

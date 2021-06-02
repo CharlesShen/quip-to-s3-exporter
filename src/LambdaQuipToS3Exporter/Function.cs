@@ -113,7 +113,7 @@ namespace LambdaQuipToS3Exporter
                             }
                         case "spreadsheet":
                             {
-                                var json = quipClient.ExportSpreadsheetToJson(document).Result;
+                                var json = quipClient.ExportSpreadsheetToJson(document, settings.SpreadsheetIgnoreRegex).Result;
                                 PutObject(settings.S3BucketOutput, documentOutputPath, Encoding.UTF8.GetBytes(json), "application/json", document.thread.updated_usec).Wait();
 
                                 break;

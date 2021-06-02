@@ -10,6 +10,7 @@ namespace LambdaQuipToS3Exporter
         public IEnumerable<string> DocumentOutputPaths { get; set; }
         public string PrependHtml { get; set; }
         public string AppendHtml { get; set; }
+        public string SpreadsheetIgnoreRegex { get; set; }
         public bool OutputQuipEditLink { get; set; }
         public string QuipDomainOverride { get; set; }
         public string QuipDomain { get { return QuipDomainOverride ?? "quip.com"; } }

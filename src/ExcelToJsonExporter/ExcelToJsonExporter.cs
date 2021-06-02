@@ -21,6 +21,9 @@ namespace ExcelToJsonExporter
         private static Regex _propertyRegex = new Regex(@$"^(?<{_identifierRegexGroupName}>\w+)(\[(?<{_arrayIndexRegexGroupName}>\d+)\])?$", RegexOptions.Singleline | RegexOptions.Compiled);
         private static NamingStrategy _namingStrategy = new CamelCaseNamingStrategy();
 
+        private IList<string> _ignoreSheetRegexes;
+        private IList<string> _ignoreColumnRegexes;
+
         private JToken generateJsonObject(SheetContext sheet, string identifierPrefix, IDictionary<string, Property> childProperties, IRow row)
         {
             var jObject = new JObject();
@@ -114,13 +117,19 @@ namespace ExcelToJsonExporter
                 for (var i = 0; i < property.maxArrayIndex.Value; i++)
                 {
                     var identifierArray = $"{identifier}[{i}]";
-                    var resultjToken = property.ChildProperties.Any() ? generateJsonObject(sheetContext, identifierArray, property.ChildProperties, row) : generateJsonPrimitive(sheetContext, identifierArray, row);
+
+                    var resultjToken = property.ChildProperties.Any() ?
+                        generateJsonObject(sheetContext, identifierArray, property.ChildProperties, row) :
+                        generateJsonPrimitive(sheetContext, identifierArray, row);
+
                     (jToken as JArray).Add(resultjToken);
                 }
             }
             else
             {
-                jToken = property.ChildProperties.Any() ? generateJsonObject(sheetContext, identifier, property.ChildProperties, row) : generateJsonPrimitive(sheetContext, identifier, row);
+                jToken = property.ChildProperties.Any() ?
+                    generateJsonObject(sheetContext, identifier, property.ChildProperties, row) :
+                    generateJsonPrimitive(sheetContext, identifier, row);
             }
 
             return jToken;
@@ -169,7 +178,11 @@ namespace ExcelToJsonExporter
             for (var i = 0; i < cellCount; i++)
             {
                 var cell = headerRow.GetCell(i);
-                if (cell == null || string.IsNullOrWhiteSpace(cell.ToString())) continue;
+                var columnName = cell?.ToString();
+                if (string.IsNullOrWhiteSpace(columnName) || (_ignoreColumnRegexes?.Any(x => Regex.IsMatch(columnName, x)) == true))
+                {
+                    continue;
+                }
 
                 var columnHeader = cell.StringCellValue;
                 buildPropertyTree(sheetContext.Properties, cell.StringCellValue);
@@ -179,10 +192,12 @@ namespace ExcelToJsonExporter
             return sheetContext;
         }
 
-        public ExcelToJsonExporter(Stream excelDataStream)
+        public ExcelToJsonExporter(Stream excelDataStream, IList<string> ignoreSheetRegex = null, IList<string> ignoreColumnRegex = null)
         {
             _excelDataStream = excelDataStream;
             _workbook = new XSSFWorkbook(_excelDataStream);
+            _ignoreSheetRegexes = ignoreSheetRegex;
+            _ignoreColumnRegexes = ignoreColumnRegex;
 
             XSSFFormulaEvaluator.EvaluateAllFormulaCells(_workbook);
         }
@@ -196,12 +211,11 @@ namespace ExcelToJsonExporter
             return _workbook.GetSheetName(index);
         }
 
-        public JToken ExportSheetToJson(int sheetIndex, bool emitSheetNameAsKey = false)
+        public JToken ExportSheetToJson(int sheetIndex)
         {
             //returns unnamed JSON array unless second parameter is set to true
             var rootJArray = new JArray();
             var sheet = _workbook.GetSheetAt(sheetIndex);
-            var sheetName = sheet.SheetName;
 
             SheetContext sheetContext;
             if (!_sheetContexts.TryGetValue(sheetIndex, out sheetContext))
@@ -228,33 +242,36 @@ namespace ExcelToJsonExporter
                 rootJArray.Add(rootJObject);
             }
 
-            if (emitSheetNameAsKey)
-            {
-                var jObject = new JObject();
-                jObject.Add(sheetName, rootJArray);
-                return jObject;
-            }
-            else
-            {
-                return rootJArray;
-            }
+            return rootJArray;
         }
 
-        public JToken ExportWorkbookToJson(bool emitSheetNameAsKey = true)
+        public JToken ExportWorkbookToJson(OutputFormat outputFormat)
         {
-            JToken rootjToken = emitSheetNameAsKey ? (new JObject() as JToken) : new JArray();
+            var rootjToken = (outputFormat == OutputFormat.ArrayOfSheets) ? new JArray() : (new JObject() as JToken);
 
             for (var i = 0; i < _workbook.NumberOfSheets; i++)
             {
-                var result = ExportSheetToJson(i, emitSheetNameAsKey);
+                var sheetName = GetSheetName(i);
 
-                if (emitSheetNameAsKey)
+                if (_ignoreSheetRegexes?.Any(x => Regex.IsMatch(sheetName, x)) == true)
                 {
-                    (rootjToken as JObject).Merge(result);
+                    continue;
                 }
-                else
+
+                var result = ExportSheetToJson(i);
+
+                switch(outputFormat)
                 {
-                    (rootjToken as JArray).Add(result);
+                    case OutputFormat.ObjectWithSheetNameAsKey:
+                        {
+                            (rootjToken as JObject).Add(sheetName, result);
+                            break;
+                        }
+                    case OutputFormat.ArrayOfSheets:
+                        {
+                            (rootjToken as JArray).Add(result);
+                            break;
+                        }
                 }
             }
 
