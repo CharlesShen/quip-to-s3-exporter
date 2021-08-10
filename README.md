@@ -11,5 +11,5 @@ Lambda function to automatically sync/export your Quip documents to an S3 bucket
 ## getting started
 
 1. dotnet publish -c Release src\LambdaQuipToS3Exporter
-2. cdk bootstrap [--profile &lt;name&gt;] (only once per region)
-3. cdk deploy [--profile &lt;name&gt;]
+2. cdk bootstrap [--profile &lt;name&gt;] (run once per region)
+3. cdk deploy [--context &lt;app-name=UNIQUE_APP_NAME&gt;] [--profile &lt;name&gt;] (same command also used for updating stack. specifying "app-name" allows for multiple instances to be deployed.)

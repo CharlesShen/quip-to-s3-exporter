@@ -6,11 +6,11 @@ using Amazon.CDK.AWS.S3;
 using Amazon.CDK.AWS.CloudFront;
 using Amazon.CDK.AWS.CloudFront.Origins;
 
-namespace LambdaQuipToS3ExporterCdk
+namespace QuipToS3ExporterCdk
 {
-    public class LambdaQuipToS3ExporterCdkStack : Stack
+    public class QuipToS3ExporterCdkStack : Stack
     {
-        internal LambdaQuipToS3ExporterCdkStack(Construct scope, string id, IStackProps props = null) : base(scope, id, props)
+        internal QuipToS3ExporterCdkStack(Construct scope, string id, IStackProps props) : base(scope, id, props)
         {
             var s3Bucket = new Bucket(this, "bucket", new BucketProps
             {
@@ -38,7 +38,7 @@ namespace LambdaQuipToS3ExporterCdk
                 }
             });
 
-            var function = new Function(this, "function", new FunctionProps
+            var function = new Amazon.CDK.AWS.Lambda.Function(this, "function", new Amazon.CDK.AWS.Lambda.FunctionProps
             {
                 Runtime = Runtime.DOTNET_CORE_3_1,
                 Code = Code.FromAsset("src/LambdaQuipToS3Exporter/bin/Release/netcoreapp3.1/publish"),
