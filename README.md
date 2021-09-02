@@ -4,9 +4,13 @@ Lambda function to automatically sync/export your Quip documents to an S3 bucket
 
 ## prerequisites
 
-* .NET Core SDK
+* .NET Core SDK (project based on current LTS 3.1)
+    * https://dotnet.microsoft.com/download
 * Node.js (Current or LTS)
-* AWS CDK Tookkit
+    * https://nodejs.org/
+* AWS CDK Toolkit
+    * npm install -g aws-cdk
+    * https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html
 
 ## getting started
 
